@@ -5,24 +5,26 @@ var registry = {};
 
 var transport = sip.makeTransport({}, function(m, remote) {
   if(m.method && m.method !== 'ACK') {
+    var rs, username;
+
     try {
       if(m.method === 'REGISTER') {  
         
         //looking up user info
-        var username = sip.parseUri(m.headers.to.uri).user;
+        username = sip.parseUri(m.headers.to.uri).user;
         
         registry[username] = m.headers.contact;
         
-        var rs = sip.makeResponse(m, 200, 'Ok');
+        rs = sip.makeResponse(m, 200, 'Ok');
         rs.headers.contact = m.headers.contact;
         transport.send(remote, rs);
       }
       else {
-        var username = sip.parseUri(m.uri).user;
+        username = sip.parseUri(m.uri).user;
         var contacts = registry[username];
         
         if(contacts && Array.isArray(contacts) && contacts.length > 0) {
-          var rs = sip.makeResponse(m, 302, 'Moved');
+          rs = sip.makeResponse(m, 302, 'Moved');
           rs.headers.contact = contacts;
           transport.send(remote, rs);
         }

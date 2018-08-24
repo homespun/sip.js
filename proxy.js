@@ -80,7 +80,7 @@ function onRequest(rq, route, remote) {
     delete contexts[id];
     throw e;
   }
-};
+}
 
 
 exports.start = function(options, route) {

@@ -1,3 +1,7 @@
+/* jshint laxcomma: true, node: true, undef: true, unused: true, nonstandard: true */
+
+var logger = require('debug')('sip');
+
 var util = require('util');
 var net = require('net');
 var dns = require('dns');
@@ -6,14 +10,12 @@ var dgram = require('dgram');
 var tls = require('tls');
 var os = require('os');
 var crypto = require('crypto');
-var WebSocket = require('uws');
-
-function debug(e) {
-  if(e.stack) {
-    util.debug(e + '\n' + e.stack);
-  }
-  else
-    util.debug(util.inspect(e));
+var WebSocket;
+try {
+  WebSocket = require('uws');
+}
+catch(e) {
+  logger('no WebSocket support');
 }
 
 function toBase64(s) { 
@@ -122,7 +124,7 @@ function parseAuthHeader(d) {
   var r2 = applyRegex(/([^\s,"=]*)\s*=\s*([^\s,"]+|"[^"\\]*(?:\\.[^"\\]*)*")\s*/g, d);
   a[r2[1]]=r2[2];
 
-  while(r2 = applyRegex(/,\s*([^\s,"=]*)\s*=\s*([^\s,"]+|"[^"\\]*(?:\\.[^"\\]*)*")\s*/g, d)) {
+  while((r2 = applyRegex(/,\s*([^\s,"=]*)\s*=\s*([^\s,"]+|"[^"\\]*(?:\\.[^"\\]*)*")\s*/g, d))) {
     a[r2[1]]=r2[2];
   }
 
@@ -134,7 +136,7 @@ function parseAuthenticationInfoHeader(d) {
   var r = applyRegex(/([^\s,"=]*)\s*=\s*([^\s,"]+|"[^"\\]*(?:\\.[^"\\]*)*")\s*/g, d);
   a[r[1]]=r[2];
 
-  while(r = applyRegex(/,\s*([^\s,"=]*)\s*=\s*([^\s,"]+|"[^"\\]*(?:\\.[^"\\]*)*")\s*/g, d)) {
+  while((r = applyRegex(/,\s*([^\s,"=]*)\s*=\s*([^\s,"]+|"[^"\\]*(?:\\.[^"\\]*)*")\s*/g, d))) {
     a[r[1]]=r[2];
   }
   return a;
@@ -213,7 +215,7 @@ function parseUri(s) {
   var r = re.exec(s);
 
   if(r) {
-    return {
+    var result = {
       schema: r[1],
       user: r[2],
       password: r[3],
@@ -223,10 +225,15 @@ function parseUri(s) {
         .map(function(s) { return s.split('='); })
         .reduce(function(params, x) { params[x[0]]=x[1] || null; return params;}, {}),
       headers: ((r[7] || '').match(/[^&=]+=[^&=]+/g) || [])
-        .map(function(s){ return s.split('=') })
+        .map(function(s){ return s.split('='); })
         .reduce(function(params, x) { params[x[0]]=x[1]; return params; }, {})
-    }
+    };
+
+    if (result.params && result.params.transport === 'tls') result.schema = 'sips';
+
+    return result;
   }
+  return {};
 }
 
 exports.parseUri = parseUri;
@@ -332,10 +339,10 @@ var stringifiers = {
     return h.map(function(x) { return 'Proxy-Authenticate: '+stringifyAuthHeader(x)+'\r\n'; }).join('');
   },
   'authorization': function(h) {
-    return h.map(function(x) { return 'Authorization: ' + stringifyAuthHeader(x) + '\r\n'}).join('');
+    return h.map(function(x) { return 'Authorization: ' + stringifyAuthHeader(x) + '\r\n'; }).join('');
   },
   'proxy-authorization': function(h) {
-    return h.map(function(x) { return 'Proxy-Authorization: ' + stringifyAuthHeader(x) + '\r\n'}).join('');; 
+    return h.map(function(x) { return 'Proxy-Authorization: ' + stringifyAuthHeader(x) + '\r\n'; }).join('');
   },
   'authentication-info': function(h) {
     return 'Authentication-Info: ' + stringifyAuthHeader(h) + '\r\n';
@@ -429,7 +436,7 @@ exports.copyMessage = function(msg, deep) {
   r.headers.via = clone(msg.headers.via);
 
   return r;
-}
+};
 
 function defaultPort(proto) {
   return proto.toUpperCase() === 'TLS' ? 5061 : 5060;
@@ -473,7 +480,7 @@ function makeStreamParser(onMessage) {
 
   var state=headers;
 
-  return function(data) { state(data); }
+  return function(data) { state(data); };
 }
 exports.makeStreamParser = makeStreamParser;
 
@@ -514,7 +521,7 @@ function makeStreamTransport(protocol, connect, createServer, callback) {
 
   function init(stream, remote) {
     var remoteid = [remote.address, remote.port].join(),
-      flowid = undefined,
+      flowid,
       refs = 0;
 
     function register_flow() {
@@ -561,7 +568,7 @@ function makeStreamTransport(protocol, connect, createServer, callback) {
           stream.write(stringify(m), 'binary');
         },
         protocol: protocol
-      }
+      };
     };
 
     if(stream.localPort) register_flow();
@@ -664,15 +671,17 @@ function makeWsTransport(options, callback) {
         },
         protocol: 'WS'
       };
-    };
+    }
 
-    return clients[uri] = open;
+    return (clients[uri] = open);
   }
 
   if(options.ws_port) {
+    var server;
+
     if(options.tls) {
       var http = require('https');
-      var server = new WebSocket.Server({
+      server = new WebSocket.Server({
           server: http.createServer(options.tls, function(rq,rs) { 
             rs.writeHead(200);
             rs.end("");
@@ -680,7 +689,7 @@ function makeWsTransport(options, callback) {
       });
     } 
     else {
-      var server = new WebSocket.Server({port:options.ws_port});
+      server = new WebSocket.Server({port:options.ws_port});
     }
 
     server.on('connection',init);
@@ -713,7 +722,7 @@ function makeWsTransport(options, callback) {
     get: open,
     open: open,
     destroy: function() { server.close(); }
-  }
+  };
 }
 
 function makeUdpTransport(options, callback) {
@@ -737,7 +746,7 @@ function makeUdpTransport(options, callback) {
   var socket = dgram.createSocket(net.isIPv6(address) ? 'udp6' : 'udp4', onMessage); 
   socket.bind(port, address);
 
-  function open(remote, error) {
+  function open(remote, error) {/* jshint unused: false */
     return {
       send: function(m) {
         var s = stringify(m);
@@ -746,25 +755,23 @@ function makeUdpTransport(options, callback) {
       protocol: 'UDP',
       release : function() {}
     }; 
-  };
+  }
   
   return {
     open: open,
     get: open,
     destroy: function() { socket.close(); }
-  }
+  };
 }
 
 function makeTransport(options, callback) {
   var protocols = {};
 
-  var callbackAndLog = callback;
-  if(options.logger && options.logger.recv) {
-    callbackAndLog = function(m, remote, stream) {
-      options.logger.recv(m, remote);
-      callback(m, remote, stream);
-    }
-  }
+  var callbackAndLog = function(m, remote, stream) {
+    if (options.logger && options.logger.recv) options.logger.recv(m, remote);
+    else logger('recv', stringify(m));
+    callback(m, remote, stream);
+  };
   
   if(options.udp === undefined || options.udp)
     protocols.UDP = makeUdpTransport(options, callbackAndLog); 
@@ -786,7 +793,8 @@ function makeTransport(options, callback) {
           m.headers.via[0].params.rport = null;
         }
       }
-      options.logger && options.logger.send && options.logger.send(m, target);
+      if (options.logger && options.logger.send) options.logger.send(m, target);
+      else logger('send', stringify(m));
       obj.send(m);
     }}});
   }
@@ -836,7 +844,7 @@ function makeWellBehavingResolver(resolve) {
       });
     }
   };
-};
+}
 
 var resolveSrv = makeWellBehavingResolver(dns.resolveSrv);
 var resolve4 = makeWellBehavingResolver(dns.resolve4);
@@ -862,8 +870,9 @@ function resolve(uri, action) {
     });
   }
 
+  var protocols;
   if(uri.port) {
-    var protocols = uri.params.transport ? [uri.params.transport] : ['UDP', 'TCP', 'TLS'];
+    protocols = uri.params.transport ? [uri.params.transport] : ['UDP', 'TCP', 'TLS'];
     
     resolve46(uri.host, function(err, address) {
       address = (address || []).map(function(x) { return protocols.map(function(p) { return { protocol: p, address: x, port: uri.port || defaultPort(p)};});})
@@ -872,7 +881,7 @@ function resolve(uri, action) {
     });
   }
   else {
-    var protocols = uri.params.transport ? [uri.params.transport] : ['tcp', 'udp', 'tls'];
+    protocols = uri.params.transport ? [uri.params.transport] : ['tcp', 'udp', 'tls'];
   
     var n = protocols.length;
     var addresses = [];
@@ -905,7 +914,7 @@ function resolve(uri, action) {
             });
           }
         }
-      })
+      });
     });
   }
 }
@@ -957,14 +966,14 @@ function createInviteServerTransaction(transport, cleanup) {
       
       transport(rs);
     }
-  }
+  };
 
   var g, h;
   var completed = {
     enter: function () {
-      g = setTimeout(function retry(t) { 
+        g = setTimeout(function retry(t) { 
         g = setTimeout(retry, t*2, t*2);
-        transport(rs)
+        transport(rs);
       }, 500, 500);
       h = setTimeout(sm.enter.bind(sm, terminated), 32000);
     },
@@ -974,11 +983,11 @@ function createInviteServerTransaction(transport, cleanup) {
     },
     message: function(m) {
       if(m.method === 'ACK')
-        sm.enter(confirmed)
+        sm.enter(confirmed);
       else
         transport(rs);
     }
-  }
+  };
  
   var timer_i; 
   var confirmed = {
@@ -1138,7 +1147,7 @@ function createClientTransaction(rq, transport, tu, cleanup) {
       clearTimeout(e);
       clearTimeout(f);
     },
-    message: function(message, remote) {
+    message: function(message, remote) {/* jshint unused: false */
       if(message.status >= 200)
         sm.enter(completed);
       else
@@ -1156,7 +1165,7 @@ function createClientTransaction(rq, transport, tu, cleanup) {
   };
 
   var proceeding = {
-    message: function(message, remote) {
+    message: function(message, remote) {/* jshint unused: false */
       if(message.status >= 200)
         sm.enter(completed);
       tu(message);
@@ -1182,7 +1191,7 @@ function makeTransactionId(m) {
   return [m.headers.cseq.method, m.headers['call-id'], m.headers.via[0].params.branch].join();
 }
 
-function makeTransactionLayer(options, transport) {
+function makeTransactionLayer(options, transport) {/* jshint unused: false */
   var server_transactions = Object.create(null);
   var client_transactions = Object.create(null);
 
@@ -1190,12 +1199,12 @@ function makeTransactionLayer(options, transport) {
     createServerTransaction: function(rq, cn) {
       var id = makeTransactionId(rq);
       
-      return server_transactions[id] = (rq.method === 'INVITE' ? createInviteServerTransaction : createServerTransaction)(
+      return (server_transactions[id] = (rq.method === 'INVITE' ? createInviteServerTransaction : createServerTransaction)(
         cn.send.bind(cn),
         function() { 
           delete server_transactions[id];
           cn.release();
-        });
+        }));
     },
     createClientTransaction: function(connection, rq, callback) {
       if(rq.method !== 'CANCEL') rq.headers.via[0].params.branch = generateBranch();
@@ -1208,12 +1217,12 @@ function makeTransactionLayer(options, transport) {
       send.reliable = connection.protocol.toUpperCase() !== 'UDP';
       
       var id = makeTransactionId(rq);
-      return client_transactions[id] = 
+      return (client_transactions[id] = 
         (rq.method === 'INVITE' ? createInviteClientTransaction : createClientTransaction)(rq, send, callback, function() { 
           delete client_transactions[id];
           connection.release();
         }, 
-        options);
+        options));
     },
     getServer: function(m) {
       return server_transactions[makeTransactionId(m)];
@@ -1242,8 +1251,9 @@ function sequentialSearch(transaction, connect, addresses, rq, callback) {
     onresponse = searching;
     
     if(addresses.length > 0) {
+      var address;
       try {
-        var address = addresses.shift();
+        address = addresses.shift();
         var client = transaction(connect(address, function(err) {
           if(err) {
             console.log("err: ", err);
@@ -1283,7 +1293,7 @@ exports.create = function(options, callback) {
 
       if(!t) {
         if(m.method && m.method !== 'ACK') {
-          var t = transaction.createServerTransaction(m, transport.get(remote));
+          t = transaction.createServerTransaction(m, transport.get(remote));
           try {
             callback(m,remote);
           } catch(e) {
@@ -1296,7 +1306,7 @@ exports.create = function(options, callback) {
         }
       }
       else {
-        t.message && t.message(m, remote);
+        if (t.message) t.message(m, remote);
       }
     } 
     catch(e) {
@@ -1316,7 +1326,7 @@ exports.create = function(options, callback) {
   }
 
   function decodeFlowToken(token) {
-    var s = (new Buffer(token, 'base64')).toString('ascii').split(',');
+    var s = (new Buffer(token, 'base64')).toString('utf-8').split(',');
     if(s.length != 6) return;
 
     var flow = {protocol: s[1], address: s[2], port: +s[3], local: {address: s[4], port: +s[5]}};
@@ -1328,7 +1338,7 @@ exports.create = function(options, callback) {
     send: function(m, callback) {
       if(m.method === undefined) {
         var t = transaction.getServer(m);
-        t && t.send && t.send(m);
+        if (t && t.send) t.send(m);
       }
       else {
         var hop = parseUri(m.uri);
@@ -1392,17 +1402,28 @@ exports.create = function(options, callback) {
       return uri.host === hostname ? decodeFlowToken(uri.user) : undefined;
     },
     isFlowUri: function(uri) {
-      return !!!decodeFlowUri(uri);
+      return !!exports.decodeFlowUri(uri);
     },
     hostname: function() { return hostname; },
     destroy: function() {
       transaction.destroy();
       transport.destroy();
     }
-  } 
-}
+  };
+};
 
 exports.start = function(options, callback) {
+  if ((!options.logger) && process.env.DEBUG) {
+    var recv = require('debug')('sip:recv');
+    var send = require('debug')('sip:send');
+
+    options.logger =
+      { recv  : recv.enabled && recv
+      , send  : send.enabled && send
+      , error : require('debug')('sip')
+      };
+  }
+
   var r = exports.create(options, callback);
 
   exports.send = r.send;
@@ -1411,5 +1432,4 @@ exports.start = function(options, callback) {
   exports.decodeFlowUri = r.decodeFlowUri;
   exports.isFlowUri = r.isFlowUri;
   exports.hostname = r.hostname;
-}
-
+};

@@ -128,7 +128,7 @@ exports.challenge = function(ctx, rs) {
   );
 
   return rs;
-}
+};
 
 exports.authenticateRequest = function(ctx, rq, creds) {
   var response = findDigestRealm(rq.headers[ctx.proxy ? 'proxy-authorization': 'authorization'], ctx.realm);
@@ -158,7 +158,7 @@ exports.authenticateRequest = function(ctx, rq, creds) {
   } 
 
   return false;
-}
+};
 
 exports.signResponse = function(ctx, rs) {
   var nc = numberTo8Hex(ctx.nc);
@@ -169,7 +169,7 @@ exports.signResponse = function(ctx, rs) {
     rspauth: q(calculateDigest({ha1:ctx.ha1, method:'', nonce:ctx.nonce, nc:nc, cnonce:ctx.cnonce, qop:ctx.qop, uri:ctx.uri, entity:rs.content}))
   };
   return rs;
-}
+};
 
 function initClientContext(ctx, rs, creds) {
   var challenge;
@@ -235,7 +235,7 @@ exports.signRequest = function (ctx, rq, rs, creds) {
   rq.headers[hname].push(signature);
 
   return ctx.qop ? ctx : null;
-}
+};
 
 exports.authenticateResponse = function(ctx, rs) {
   var signature = rs.headers[ctx.proxy ? 'proxy-authentication-info' : 'authentication-info'];
@@ -257,6 +257,6 @@ exports.authenticateResponse = function(ctx, rs) {
   }
  
   return false;
-}
+};
 
 

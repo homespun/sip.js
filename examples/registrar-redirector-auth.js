@@ -20,12 +20,14 @@ sip.start({
   }
 },
 function(rq) {
+  var rs, username, userinfo;
+
   try {
     if(rq.method === 'REGISTER') {  
       
       //looking up user info
-      var username = sip.parseUri(rq.headers.to.uri).user;
-      var userinfo = registry[username];
+      username = sip.parseUri(rq.headers.to.uri).user;
+      userinfo = registry[username];
 
       if(!userinfo) { // we don't know this user and answer with a challenge to hide this fact 
         var session = {realm: realm};
@@ -38,18 +40,18 @@ function(rq) {
         }
         else {
           userinfo.contact = rq.headers.contact;
-          var rs = sip.makeResponse(rq, 200, 'Ok');
+          rs = sip.makeResponse(rq, 200, 'Ok');
           rs.headers.contact = rq.headers.contact;
           sip.send(rs);
         }
       }
     }
     else if(rq.method === 'INVITE') {
-      var username = sip.parseUri(rq.uri).user;
-      var userinfo = registry[username]
+      username = sip.parseUri(rq.uri).user;
+      userinfo = registry[username];
       
       if(userinfo && Array.isArray(userinfo.contact) && userinfo.contact.length > 0) {
-        var rs = sip.makeResponse(rq, 302, 'Moved');
+        rs = sip.makeResponse(rq, 302, 'Moved');
         rs.headers.contact = userinfo.contact;
         sip.send(rs);
       }

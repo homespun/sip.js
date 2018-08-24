@@ -87,7 +87,7 @@ proxy.start({
   logger: {
     send: function(m) { console.log('send', util.inspect(m,{depth: null})); },
     recv: function(m) { console.log('recv', util.inspect(m,{depth: null})); },
-    error: function(e) { console.log(e, e.stack) }
+    error: function(e) { console.log(e, e.stack); }
   },
   hostname: process.argv[2],
   ws_port: (+process.argv[3]) || 8506

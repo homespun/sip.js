@@ -95,7 +95,7 @@ function(rs) {
         else {
           sip.send(sip.makeResponse(rq, 405, 'Method not allowed'));
         }
-      }
+      };
     }
   }
 });

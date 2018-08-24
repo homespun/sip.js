@@ -13,8 +13,10 @@ proxy.start({
     error: function(e) { util.debug(e.stack); }
   }
 }, function(rq) {
+  var user;
+
   if(rq.method === 'REGISTER') {
-    var user = sip.parseUri(rq.headers.to.uri).user;
+    user = sip.parseUri(rq.headers.to.uri).user;
 
     contacts[user] = rq.headers.contact;
     var rs = sip.makeResponse(rq, 200, 'Ok');
@@ -24,7 +26,7 @@ proxy.start({
     proxy.send(rs);
   }
   else {
-    var user = sip.parseUri(rq.uri).user;
+    user = sip.parseUri(rq.uri).user;
 
     if(contacts[user] && Array.isArray(contacts[user]) && contacts[user].length > 0) {
       rq.uri = contacts[user][0].uri;

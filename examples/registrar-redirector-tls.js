@@ -20,25 +20,27 @@ sip.start({
   }
 },
 function(rq) {
+  var rs, username;
+
   try {
     if(rq.method === 'REGISTER') {  
       
       //looking up user info
-      var username = sip.parseUri(rq.headers.to.uri).user;
+      username = sip.parseUri(rq.headers.to.uri).user;
       
       registry[username] = rq.headers.contact;
       
-      var rs = sip.makeResponse(rq, 200, 'Ok');
+      rs = sip.makeResponse(rq, 200, 'Ok');
       rs.headers.contact = rq.headers.contact;
       util.debug('sending response');
       sip.send(rs);
     }
     else if(rq.method === 'INVITE') {
-      var username = sip.parseUri(rq.uri).user;
+      username = sip.parseUri(rq.uri).user;
       var contacts = registry[username];
       
       if(contacts && Array.isArray(contacts) && contacts.length > 0) {
-        var rs = sip.makeResponse(rq, 302, 'Moved');
+        rs = sip.makeResponse(rq, 302, 'Moved');
         rs.headers.contact = contacts;
         sip.send(rs);
       }

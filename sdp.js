@@ -33,7 +33,7 @@ var parsers = {
 };
 
 exports.parse = function(sdp) {
-  var sdp = sdp.split(/\r\n/);
+  sdp = sdp.split(/\r\n/);
   
   var root = {};
   var m;
@@ -121,6 +121,6 @@ exports.stringify = function(sdp) {
   });
 
   return s;
-}
+};
 
 
