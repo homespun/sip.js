@@ -1,8 +1,8 @@
 {
   "name": "sip",
   "description": "Simple SIP implementation",
-  "version": "0.0.3",
-  "homepage": "http://github.com/kirm/sip.js",
+  "version": "0.0.4",
+  "homepage": "http://github.com/homespun/sip.js",
   "author": "Kirill Mikhailov <kirill.mikhailov@gmail.com>",
   "main": "sip",
   "scripts": {
@@ -15,7 +15,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/kirm/sip.js.git"
+    "url": "https://github.com/homespun/sip.js.git"
   },
   "engines": {
     "node": ">=0.2.2"
@@ -25,5 +25,7 @@
   },
   "devDependencies": {
     "coffee-script": "~1.6.2"
-  }
+  },
+  "bundleDependencies": false,
+  "deprecated": false
 }

@@ -75,7 +75,6 @@
         "uri": "sip:jdrosen@example.com",
         "params": {
           "newparam": "newvalue",
-          "secondparam": null,
           "q": "0.33"
         }
       }
